@@ -3,13 +3,15 @@ package service
 // to separate the entity for the repository from the dto of the request
 
 type AddTask struct {
-	Status  string
-	Method  string
-	URL     string
-	Headers map[string][]string
+	Status string
 }
 
 type GetTask struct {
+	ID int
+	Task
+}
+
+type AddResponse struct {
 	ID             int
 	Status         string
 	HTTPStatusCode int
@@ -17,8 +19,7 @@ type GetTask struct {
 	Length         int
 }
 
-type AddResponse struct {
-	ID             int
+type Task struct {
 	Status         string
 	HTTPStatusCode int
 	Headers        map[string][]string

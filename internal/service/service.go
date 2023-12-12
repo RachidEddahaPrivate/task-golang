@@ -13,7 +13,7 @@ import (
 // since it is a simple application, I will use implement the repository to store information in memory on runtime
 // inevitably, this means that the data will be lost when the application is stopped
 type repository interface {
-	AddTask(task AddTask) (int, error)
+	AddTask(status string) (int, error)
 	GetTask(ID int) (GetTask, error)
 	ChangeStatus(ID int, status string) error
 	AddResponse(response AddResponse) error
@@ -56,12 +56,7 @@ func (s *Service) GetTask(taskID int) (dto.GetTaskResponse, error) {
 }
 
 func (s *Service) CreateTask(request dto.CreateTaskRequest) (dto.CreateTaskResponse, error) {
-	taskID, err := s.repository.AddTask(AddTask{
-		Status:  statusNew,
-		Method:  request.Method,
-		URL:     request.URL,
-		Headers: request.Headers,
-	})
+	taskID, err := s.repository.AddTask(statusNew)
 	if err != nil {
 		return dto.CreateTaskResponse{}, err
 	}
