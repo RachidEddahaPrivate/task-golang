@@ -25,7 +25,7 @@ func NewController(service service) *Controller {
 }
 
 func (c *Controller) RegisterRoutes(e *echo.Echo) {
-	g := e.Group("/task")
+	g := e.Group("/task") // you could version the api here (e.g. api/v1/task) and use a middleware to check the token
 	g.GET("/:taskId", c.getTask)
 	g.POST("", c.createTask)
 }
