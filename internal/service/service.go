@@ -89,7 +89,7 @@ func (s *Service) makeRequest(taskID int, request dto.CreateTaskRequest) {
 	}
 
 	for k, v := range request.Headers {
-		req.Header[k] = v
+		req.Header.Add(k, v)
 	}
 
 	client := http.Client{Timeout: timeoutHTTPRequest}
