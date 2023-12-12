@@ -42,12 +42,22 @@ const (
 )
 
 func (s *Service) GetTask(taskID int) (dto.GetTaskResponse, error) {
-	// TODO implement me
-	panic("implement me")
+	task, err := s.repository.GetTask(taskID)
+	if err != nil {
+		return dto.GetTaskResponse{}, err
+	}
+	return dto.GetTaskResponse{
+		ID:             task.ID,
+		Status:         task.Status,
+		HTTPStatusCode: task.HTTPStatusCode,
+		Headers:        task.Headers,
+		Length:         task.Length,
+	}, nil
 }
 
 func (s *Service) CreateTask(request dto.CreateTaskRequest) (dto.CreateTaskResponse, error) {
 	taskID, err := s.repository.AddTask(AddTask{
+		Status:  statusNew,
 		Method:  request.Method,
 		URL:     request.URL,
 		Headers: request.Headers,

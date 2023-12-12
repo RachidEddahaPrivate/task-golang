@@ -3,6 +3,7 @@ package service
 // to separate the entity for the repository from the dto of the request
 
 type AddTask struct {
+	Status  string
 	Method  string
 	URL     string
 	Headers map[string][]string
