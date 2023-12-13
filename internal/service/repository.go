@@ -26,7 +26,7 @@ func NewRepository() *Repository {
 // in this case there are no errors, but the function signature was thought to be able to return an error
 // in case of using a database
 func (r *Repository) AddTask(status string) (result int, err error) {
-	// for concurrent access, it's critical to lock the map when you create a new task to not have duplicated IDs
+	// for concurrent access, it's critical to lock the map when accessing it to read or write
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
