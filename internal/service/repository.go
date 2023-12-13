@@ -40,6 +40,8 @@ func (r *Repository) AddTask(status string) (result int, err error) {
 }
 
 func (r *Repository) GetTask(ID int) (GetTask, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	result, ok := r.tasks[ID]
 	if !ok { // you can also check if the id is greater than the lastTaskIDCreated
 		// codified error
@@ -51,6 +53,8 @@ func (r *Repository) GetTask(ID int) (GetTask, error) {
 }
 
 func (r *Repository) ChangeStatus(ID int, status string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	task, ok := r.tasks[ID]
 	if !ok {
 		logger.Error().Msgf("task with ID %d not found", ID)
@@ -62,6 +66,8 @@ func (r *Repository) ChangeStatus(ID int, status string) error {
 }
 
 func (r *Repository) AddResponse(response AddResponse) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	task, ok := r.tasks[response.ID]
 	if !ok {
 		logger.Error().Msgf("task with ID %d not found", response.ID)
@@ -76,6 +82,8 @@ func (r *Repository) AddResponse(response AddResponse) error {
 }
 
 func (r *Repository) ChangeStatusInError(ID int, status string, err string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	task, ok := r.tasks[ID]
 	if !ok {
 		logger.Error().Msgf("task with ID %d not found", ID)

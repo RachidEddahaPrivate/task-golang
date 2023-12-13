@@ -15,26 +15,90 @@ import (
 
 func TestService_CreateTask(t *testing.T) {
 	logger.InitializeForTest()
-	type fields struct {
-		repository repository
-	}
+
+	// Important: this test mut be executed in cascade
+	// because the repository is a global variable
+	s := NewService(NewRepository())
 	type args struct {
 		request dto.CreateTaskRequest
 	}
+
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    dto.CreateTaskResponse
-		wantErr bool
+		name      string
+		args      args
+		want      dto.CreateTaskResponse
+		wantErr   bool
+		checkFunc func(t *testing.T, s *Service)
 	}{
-		// TODO: Add test cases.
+		{
+			name: "create first task",
+			args: args{
+				request: dto.CreateTaskRequest{
+					Method: "GET",
+					URL:    "http://www.google.com",
+				},
+			},
+			want: dto.CreateTaskResponse{
+				ID: 1,
+			},
+		},
+		{
+			name: "create second task",
+			args: args{
+				request: dto.CreateTaskRequest{
+					Method: "GET",
+					URL:    "http://www.google.com",
+				},
+			},
+			want: dto.CreateTaskResponse{
+				ID: 2,
+			},
+		},
+		{
+			name: "create third task",
+			args: args{
+				request: dto.CreateTaskRequest{
+					Method: "GET",
+					URL:    "http://www.google.com",
+				},
+			},
+			want: dto.CreateTaskResponse{
+				ID: 3,
+			},
+		},
+		{
+			name: "stress test",
+			args: args{
+				request: dto.CreateTaskRequest{
+					Method: "GET",
+					URL:    "http://www.google.com",
+				},
+			},
+			want: dto.CreateTaskResponse{
+				ID: 4,
+			},
+			checkFunc: func(t *testing.T, s *Service) {
+				sg := sync.WaitGroup{}
+				for i := 0; i < 100; i++ {
+					sg.Add(1)
+					go func() {
+						defer sg.Done()
+						_, _ = s.CreateTask(dto.CreateTaskRequest{
+							Method: "GET",
+							URL:    "googlassadse",
+						})
+					}()
+				}
+				sg.Wait()
+				_, err := s.GetTask(104)
+				if err != nil {
+					t.Errorf("error getting task with id %d", 104)
+				}
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Service{
-				repository: tt.fields.repository,
-			}
 			got, err := s.CreateTask(tt.args.request)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CreateTask() error = %v, wantErr %v", err, tt.wantErr)
@@ -42,6 +106,9 @@ func TestService_CreateTask(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("CreateTask() got = %v, want %v", got, tt.want)
+			}
+			if tt.checkFunc != nil {
+				tt.checkFunc(t, s)
 			}
 		})
 	}
