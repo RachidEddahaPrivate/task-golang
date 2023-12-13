@@ -19,7 +19,7 @@ var internalLogger *zerolog.Logger
 
 func Initialize(config configuration.ConfigLogger) {
 	logLevel := calculateLevelLogging(config.LogLevel)
-	logOutput := calculateOutputLogging(config.LogOutputFile)
+	logOutput := calculateOutputLogging(config.LogSaveFile)
 
 	logger := zerolog.New(logOutput).
 		Level(logLevel).

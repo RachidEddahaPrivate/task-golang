@@ -24,4 +24,5 @@ type Task struct {
 	HTTPStatusCode int
 	Headers        map[string][]string
 	Length         int
+	Error          string // this field used only to keep track of the error message
 }

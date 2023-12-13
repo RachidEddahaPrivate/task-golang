@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"net/http"
+	"strings"
 	"task/internal/dto"
 	"task/pkg/logger"
 	"time"
@@ -17,6 +18,7 @@ type repository interface {
 	GetTask(ID int) (GetTask, error)
 	ChangeStatus(ID int, status string) error
 	AddResponse(response AddResponse) error
+	ChangeStatusInError(ID int, status string, err string) error
 }
 
 type Service struct {
@@ -38,6 +40,7 @@ const (
 	statusDone      = "done"
 	statusError     = "error"
 
+	// timeoutHTTPRequest is the timeout for the http request could be a configuration parameter in the file env
 	timeoutHTTPRequest = 10 * time.Second
 )
 
@@ -50,9 +53,17 @@ func (s *Service) GetTask(taskID int) (dto.GetTaskResponse, error) {
 		ID:             task.ID,
 		Status:         task.Status,
 		HTTPStatusCode: task.HTTPStatusCode,
-		Headers:        task.Headers,
+		Headers:        transformHeaders(task.Headers),
 		Length:         task.Length,
 	}, nil
+}
+
+func transformHeaders(headers map[string][]string) map[string]string {
+	result := make(map[string]string)
+	for k, v := range headers {
+		result[k] = strings.Join(v, ",")
+	}
+	return result
 }
 
 func (s *Service) CreateTask(request dto.CreateTaskRequest) (dto.CreateTaskResponse, error) {
@@ -73,7 +84,7 @@ func (s *Service) CreateTask(request dto.CreateTaskRequest) (dto.CreateTaskRespo
 func (s *Service) makeRequest(taskID int, request dto.CreateTaskRequest) {
 	err := s.repository.ChangeStatus(taskID, statusInProcess)
 	if err != nil {
-		s.changeStatusToError(taskID)
+		s.changeStatusToError(taskID, err)
 		return
 	}
 
@@ -84,12 +95,14 @@ func (s *Service) makeRequest(taskID int, request dto.CreateTaskRequest) {
 	if err != nil {
 		logger.Error().Msgf("failed to create request for task %d, err= %v", taskID, err)
 
-		s.changeStatusToError(taskID)
+		s.changeStatusToError(taskID, err)
 		return
 	}
 
 	for k, v := range request.Headers {
-		req.Header.Add(k, v)
+		values := strings.Split(v, ",") // I will use this to handle the case where the same header is provided with different values
+		req.Header[k] = values
+		logger.Debug().Msgf("header %s: %v", k, values)
 	}
 
 	client := http.Client{Timeout: timeoutHTTPRequest}
@@ -97,7 +110,7 @@ func (s *Service) makeRequest(taskID int, request dto.CreateTaskRequest) {
 	if err != nil {
 		logger.Error().Msgf("failed to make request for task %d, err= %v", taskID, err)
 
-		s.changeStatusToError(taskID)
+		s.changeStatusToError(taskID, err)
 		return
 	}
 
@@ -111,16 +124,15 @@ func (s *Service) makeRequest(taskID int, request dto.CreateTaskRequest) {
 	if err != nil {
 		logger.Error().Msgf("failed to add response for task %d, err= %v", taskID, err)
 
-		s.changeStatusToError(taskID)
+		s.changeStatusToError(taskID, err)
 	}
 	return
 }
 
-func (s *Service) changeStatusToError(taskID int) {
-	err := s.repository.ChangeStatus(taskID, statusError)
+func (s *Service) changeStatusToError(taskID int, errToSave error) {
+	err := s.repository.ChangeStatusInError(taskID, statusError, errToSave.Error())
 	if err != nil {
 		logger.Error().Err(err).Msgf("failed to change status of task %d to error", taskID)
-		return
 	}
 	return
 }

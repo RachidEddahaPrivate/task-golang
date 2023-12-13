@@ -18,7 +18,7 @@ func NewRepository() *Repository {
 	return &Repository{
 		mu:                sync.Mutex{},
 		tasks:             make(map[int]Task),
-		lastTaskIDCreated: 0,
+		lastTaskIDCreated: 1, // start with value 1 for convenience
 	}
 }
 
@@ -71,5 +71,17 @@ func (r *Repository) AddResponse(response AddResponse) error {
 	task.Headers = response.Headers
 	task.Length = response.Length
 	r.tasks[response.ID] = task
+	return nil
+}
+
+func (r *Repository) ChangeStatusInError(ID int, status string, err string) error {
+	task, ok := r.tasks[ID]
+	if !ok {
+		logger.Error().Msgf("task with ID %d not found", ID)
+		return fmt.Errorf("task with ID %d not found", ID)
+	}
+	task.Status = status
+	task.Error = err
+	r.tasks[ID] = task
 	return nil
 }

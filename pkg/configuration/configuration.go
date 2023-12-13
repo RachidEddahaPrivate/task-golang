@@ -18,8 +18,8 @@ type Config struct {
 }
 
 type ConfigLogger struct {
-	LogLevel      string `mapstructure:"LOG_LEVEL" validate:"required"`
-	LogOutputFile bool   `mapstructure:"LOG_OUTPUT_FILE"`
+	LogLevel    string `mapstructure:"LOG_LEVEL" validate:"required"`
+	LogSaveFile bool   `mapstructure:"LOG_SAVE_FILE"`
 }
 
 type ConfigEcho struct {
