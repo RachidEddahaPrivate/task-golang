@@ -70,6 +70,7 @@ func (r *Repository) AddResponse(response AddResponse) error {
 	task.HTTPStatusCode = response.HTTPStatusCode
 	task.Headers = response.Headers
 	task.Length = response.Length
+	task.Status = response.Status
 	r.tasks[response.ID] = task
 	return nil
 }

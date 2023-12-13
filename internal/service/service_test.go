@@ -1,34 +1,17 @@
 package service
 
 import (
+	"github.com/go-test/deep"
 	"maps"
+	"net/http"
 	"reflect"
 	"sync"
 	"task/internal/dto"
+	"task/pkg/customerror"
 	"task/pkg/logger"
+	"task/pkg/models"
 	"testing"
 )
-
-func TestNewService(t *testing.T) {
-	logger.InitializeForTest()
-	type args struct {
-		repository repository
-	}
-	tests := []struct {
-		name string
-		args args
-		want *Service
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NewService(tt.args.repository); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewService() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
 
 func TestService_CreateTask(t *testing.T) {
 	logger.InitializeForTest()
@@ -66,33 +49,107 @@ func TestService_CreateTask(t *testing.T) {
 
 func TestService_GetTask(t *testing.T) {
 	logger.InitializeForTest()
-	type fields struct {
-		repository repository
+	initialMap := map[int]Task{
+		1: {
+			Status: statusNew,
+		},
+		2: {
+			Status: statusInProcess,
+		},
+		3: {
+			Status:         statusDone,
+			HTTPStatusCode: http.StatusOK,
+			Headers: map[string][]string{
+				"Content-Type": {"application/json,application/xml"},
+				"Accept":       {"application/json"},
+			},
+			Length: 20,
+			Error:  "",
+		},
+		4: {
+			Status: statusError,
+			Error:  "incorrect url",
+		},
 	}
+	s := NewService(&Repository{
+		mu:                sync.Mutex{},
+		tasks:             initialMap,
+		lastTaskIDCreated: len(initialMap),
+	})
 	type args struct {
 		taskID int
 	}
 	tests := []struct {
 		name    string
-		fields  fields
 		args    args
 		want    dto.GetTaskResponse
-		wantErr bool
+		wantErr error
 	}{
-		// TODO: Add test cases.
+		{
+			name: "response with correct status",
+			args: args{
+				taskID: 1,
+			},
+			want: dto.GetTaskResponse{
+				ID:     1,
+				Status: statusNew,
+			},
+		},
+		{
+			name: "response with in process status",
+			args: args{
+				taskID: 2,
+			},
+			want: dto.GetTaskResponse{
+				ID:     2,
+				Status: statusInProcess,
+			},
+		},
+		{
+			name: "response with multiple headers",
+			args: args{
+				taskID: 3,
+			},
+			want: dto.GetTaskResponse{
+				ID:             3,
+				Status:         statusDone,
+				HTTPStatusCode: http.StatusOK,
+				Headers: map[string]string{
+					"Content-Type": "application/json,application/xml",
+					"Accept":       "application/json",
+				},
+			},
+		},
+		{
+			name: "response with error",
+			args: args{
+				taskID: 4,
+			},
+			want: dto.GetTaskResponse{
+				ID:     4,
+				Status: statusError,
+			},
+		},
+		{
+			name: "test with incorrect taskID",
+			args: args{
+				taskID: 5,
+			},
+			want: dto.GetTaskResponse{},
+			wantErr: customerror.NewI18nErrorWithParams(models.TaskIDNotFoundError, map[string]interface{}{
+				"taskId": 5,
+			}),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Service{
-				repository: tt.fields.repository,
-			}
 			got, err := s.GetTask(tt.args.taskID)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetTask() error = %v, wantErr %v", err, tt.wantErr)
+			if diff := deep.Equal(err, tt.wantErr); diff != nil {
+				t.Errorf("GetTask() error = %v, wantErr %v, diff %v", err, tt.wantErr, diff)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetTask() got = %v, want %v", got, tt.want)
+			if diff := deep.Equal(got, tt.want); diff != nil {
+				t.Errorf("GetTask() got = %v, want %v, diff %v", got, tt.want, diff)
 			}
 		})
 	}
@@ -130,12 +187,61 @@ func TestService_makeRequest(t *testing.T) {
 				taskID: 1,
 				request: dto.CreateTaskRequest{
 					Method: "try",
-					URL:    "www.google.com",
+					URL:    "http://www.google.com",
+				},
+			},
+			checkFunc: func(t *testing.T, task GetTask) {
+				if task.Status != statusDone {
+					t.Errorf("task status = %v, want %v", task.Status, statusDone)
+				}
+				if task.HTTPStatusCode != http.StatusMethodNotAllowed {
+					t.Errorf("task HTTPStatusCode = %v, want %v", task.HTTPStatusCode, http.StatusMethodNotAllowed)
+				}
+			},
+		},
+		{
+			name: "test with incorrect url",
+			fields: fields{repository: &Repository{
+				mu:                sync.Mutex{},
+				tasks:             maps.Clone(initialMap),
+				lastTaskIDCreated: len(initialMap),
+			}},
+			args: args{
+				taskID: 1,
+				request: dto.CreateTaskRequest{
+					Method: "GET",
+					URL:    "http://wwwww.google.com",
 				},
 			},
 			checkFunc: func(t *testing.T, task GetTask) {
 				if task.Status != statusError {
 					t.Errorf("task status = %v, want %v", task.Status, statusError)
+				}
+			},
+		},
+		{
+			name: "test with correct request",
+			fields: fields{repository: &Repository{
+				mu:                sync.Mutex{},
+				tasks:             maps.Clone(initialMap),
+				lastTaskIDCreated: len(initialMap),
+			}},
+			args: args{
+				taskID: 1,
+				request: dto.CreateTaskRequest{
+					Method: "GET",
+					URL:    "http://www.google.com",
+				},
+			},
+			checkFunc: func(t *testing.T, task GetTask) {
+				if task.Status != statusDone {
+					t.Errorf("task status = %v, want %v", task.Status, statusDone)
+				}
+				if task.HTTPStatusCode != http.StatusOK {
+					t.Errorf("task HTTPStatusCode = %v, want %v", task.HTTPStatusCode, http.StatusOK)
+				}
+				if task.Error != "" {
+					t.Errorf("task Error = %v, want %v", task.Error, "")
 				}
 			},
 		},

@@ -59,6 +59,9 @@ func (s *Service) GetTask(taskID int) (dto.GetTaskResponse, error) {
 }
 
 func transformHeaders(headers map[string][]string) map[string]string {
+	if len(headers) == 0 {
+		return nil
+	}
 	result := make(map[string]string)
 	for k, v := range headers {
 		result[k] = strings.Join(v, ",")
