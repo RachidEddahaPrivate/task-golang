@@ -6,6 +6,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"task/pkg/configuration"
+	"task/pkg/customerror"
 	"task/pkg/logger"
 )
 
@@ -30,6 +31,7 @@ func NewEcho(config configuration.ConfigEcho) *echo.Echo {
 
 	e.HideBanner = true
 
+	e.HTTPErrorHandler = customerror.ErrorHandler
 	logger.Info().Msg("Finished echo initialization")
 	return e
 }
