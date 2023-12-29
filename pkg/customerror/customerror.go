@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/labstack/echo/v4"
-	"task/pkg/logger"
 )
 
 const (
@@ -37,8 +36,6 @@ func NewI18nErrorWithParams(code string, params map[string]interface{}) *CustomE
 }
 
 func ErrorHandler(err error, c echo.Context) {
-	logger.Error().Err(err).Msgf("Error occurred in request %s %s", c.Request().Method, c.Request().URL)
-
 	var customError *CustomError
 	if errors.As(err, &customError) {
 		_ = c.JSON(customError.HttpCode, customError)
